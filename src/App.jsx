@@ -138,12 +138,13 @@ function Game(){
 }
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
-      <h1>Tile Game</h1>
-      <Game />
+      <div className="containter">
+          <h1>Tile Game</h1>
+          <Game />
+      </div>
     </>
   )
 }
