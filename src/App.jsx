@@ -245,9 +245,7 @@ function Game(){
       <br/>
       <div>{`random: ${statusList.seed}`}</div>
     </>
-
   )
-
 }
 
 function App() {
