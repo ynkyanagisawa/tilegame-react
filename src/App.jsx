@@ -1,13 +1,134 @@
 import { useState } from 'react'
 
+class Len{
+
+  constructor(row_, col_){
+    this.row = row_;
+    this.col = col_;
+  }
+
+}
+
+class TileState{
+
+  constructor(state_, number_){
+    this.state = state_;
+    this.number = number_;
+  }
+
+}
+class StateList{
+
+  constructor(row_,col_){
+    this.row = row_;
+    this.col = col_;
+  }
+
+  init(){
+    this.seed = this.calcSeedByRandomNumber();
+    this.members = this.calcStateListFromSeed();
+    return;
+  }
+  copy(){
+    let stateListCopy = new StateList(this.row, this.col);
+    stateListCopy.seed = this.seed;
+    stateListCopy.members = this.members.slice();
+    return stateListCopy;
+  }
+
+  calcSeedByRandomNumber(){
+    const maxNum = 1 << (this.row * this.col);
+    return Math.floor(Math.random()*maxNum);
+  }
+
+  calcStateListFromSeed(){
+
+    let statusListInit = [];
+    for(let i=0; i<this.row; i++){
+      let statusListRow = [];
+      for(let j=0; j<this.col; j++){
+        //const state = State(false);
+
+        const state = this.calcBitState(i,j); 
+        statusListRow.push(state);
+      }
+      statusListInit.push(statusListRow);
+    }
+    return statusListInit;
+
+  }
+  calcSeedFromStatList(){
+
+    let seed = 0;
+    for(let i=0; i<this.row; i++){
+      for(let j=0; j<this.col; j++){
+        if(this.members[i][j]){
+          seed += 1 << (i*this.row + j);
+        }
+      }
+    }
+    return;
+
+  }
+
+  isWithinArea(i,j){
+    const iJudge = i>=0 && i<this.row;
+    const jJudge = j>=0 && j<this.col;
+    return iJudge && jJudge;
+  }
+  calcNumber(i,j){
+    return i*this.col + j;
+  }
+  calcBitState(i,j){
+    const targetBit = (this.seed >> this.calcNumber(i,j)) & 1
+    return targetBit === 1; 
+  }
+
+  updateMembers(i,j){
+
+    // paramter
+    const DELTA_LIST = [
+      [0,0],[-1,0],[0,-1],[1,0],[0,1]
+    ];
+
+    // update
+    for(const delta of DELTA_LIST){
+      const iNext = i + delta[0];
+      const jNext = j + delta[1];
+      if(!this.isWithinArea(iNext,jNext)) continue;
+      this.members[iNext][jNext] = !this.members[iNext][jNext];
+    }
+    return;
+
+  }
+  updateMembersBySeed(seed){
+
+    const cp = this.copy();
+    cp.seed = seed;
+    this.members = cp.calcStateListFromSeed();;
+    return;
+  }
+  judgeClear(){
+
+    for(let i=0; i<this.row; i++){
+      for(let j=0; j<this.col; j++){
+        if(!this.members[i][j]) return false;
+      }
+    }
+    return true;
+
+  }
+
+}
+
 function Tile({status, number, clickHandler}){
 
   function getClassName(status_){
 
     // paramter
     const bgClass = {
-      false : "bg-secondary",
-      true : "bg-primary"
+      false : "bg-light",
+      true : "bg-danger"
     }
     let classList = [];
     classList.push("col");
@@ -22,103 +143,14 @@ function Tile({status, number, clickHandler}){
     <>
       <div className={getClassName(status)} onClick={()=>clickHandler(number[0],number[1])}>{number}</div>
     </>
-
   )
-
-
 }
 
-function Form(){
+function Form({len,submitHandler}){
 
-
-}
-
-
-function Game(){
-
-  // init parameter
-  const ROW_INIT = 3;
-  const COL_INIT = 3;
-  const LEN_INIT = {
-    "row" : ROW_INIT,
-    "col" : COL_INIT
-  }
-  const [len, setLen] = useState(LEN_INIT);
-
-  // status init
-  function getInitStatusList(row, col){
-    let statusListInit = [];
-    for(let i=0; i<row; i++){
-      let statusListRow = [];
-      for(let j=0; j<col; j++){
-        statusListRow.push(false);
-      }
-      statusListInit.push(statusListRow);
-    }
-    return statusListInit;
-
-  }
-
-  const statusListInit = getInitStatusList(len.row,len.col);
-  const [statusList, setStatusList] = useState(statusListInit);
-
-  function isWithinArea(i,j){
-    const iJudge = i>=0 && i<len.row;
-    const jJudge = j>=0 && j<len.col;
-    return iJudge && jJudge;
-  }
-
-  function clickHandler(i,j){
-
-    // paramter
-    const deltaList = [
-      [0,0],[-1,0],[0,-1],[1,0],[0,1]
-    ];
-
-    // copy
-    let nextStatusList = statusList.slice();
-    // inverse
-    for(const delta of deltaList){
-      const iNext = i + delta[0];
-      const jNext = j + delta[1];
-      if(!isWithinArea(iNext,jNext)) continue;
-      nextStatusList[iNext][jNext] = !nextStatusList[iNext][jNext];
-    }
-    // update
-    setStatusList(nextStatusList);
-  }
-
-  function handleSubmit(e){
-    e.preventDefault();
-    // reset len
-    const nextLen = {
-      "row" : Number(e.target.col.value),
-      "col" : Number(e.target.row.value)
-    }
-    setLen(nextLen);
-    // reset statusList
-    const nextStatusList = getInitStatusList(nextLen.row, nextLen.col);
-    setStatusList(nextStatusList);
-  }
-
-
-  let content = statusList.map((valueList,index)=>{
-      return(
-        <div className="row" key={index}>
-        {valueList.map((value,index2)=>{
-          return(
-            <Tile status={value} number={[index,index2]} key={index2} clickHandler={clickHandler}/>
-          )
-        })}
-        </div>
-      )
-      //return getRowContent(valueList)
-  });
-
-  return(
+  return (
     <>
-      <br/>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={submitHandler}>
         <label>
           行
           <input id="row" name="row" type="number" defaultValue={len.row} />
@@ -129,8 +161,89 @@ function Game(){
         </label>
         <button className="btn btn-secondary" type="submit">リセット</button>
       </form>
+    </>
+  )
+
+}
+function Board({statusList,clickHandler}){
+
+  const statusListM = statusList.members
+
+  return(
+    <>
+    {statusListM.map((valueList,index)=>{
+        return(
+          <div className="row" key={index}>
+          {valueList.map((value,index2)=>{
+            return(
+              <Tile status={value} number={[index,index2]} key={index2} clickHandler={clickHandler}/>
+            )
+          })}
+          </div>
+        )
+    })}
+    </>
+  );
+
+}
+
+
+function Game(){
+
+  // init parameter
+  const ROW_INIT = 3;
+  const COL_INIT = 3;
+
+  // use state
+  const [len, setLen] = useState(new Len(ROW_INIT,COL_INIT));
+  let statusListInit = new StateList(ROW_INIT,COL_INIT);
+  statusListInit.init();
+  const [statusList, setStatusList] = useState(statusListInit);
+
+  // click handler
+  function clickHandler(i,j){
+
+    // copy & change
+    let nextStatusList = statusList.copy();
+    nextStatusList.updateMembers(i,j);
+
+    // update
+    setStatusList(nextStatusList);
+
+    // judge clear
+    if(nextStatusList.judgeClear()){
+      alert("クリア");
+    }
+  }
+
+  // submit handler
+  function submitHandler(e){
+
+    // prevent default
+    e.preventDefault();
+
+    // reset len
+    const nextLen = new Len(
+      Number(e.target.col.value),
+      Number(e.target.row.value)
+    )
+    setLen(nextLen);
+
+    // reset statusList
+    let nextStatusList = new StateList(nextLen.row,nextLen.col);
+    nextStatusList.init();
+    setStatusList(nextStatusList);
+
+  }
+
+  return(
+    <>
       <br/>
-      {content}
+      <Form len={len} submitHandler={submitHandler} />
+      <br/>
+      <Board statusList={statusList} clickHandler={clickHandler} />
+      <br/>
+      <div>{`random: ${statusList.seed}`}</div>
     </>
 
   )
@@ -142,8 +255,10 @@ function App() {
   return (
     <>
       <div className="containter">
+        <div className="mx-auto w-75">
           <h1>Tile Game</h1>
           <Game />
+        </div>
       </div>
     </>
   )
